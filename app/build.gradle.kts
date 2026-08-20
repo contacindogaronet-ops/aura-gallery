@@ -12,7 +12,27 @@ android {
         minSdk = 24
         targetSdk = 34
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.0.0"
+    }
+
+    // Mengunci Tanda Tangan APK secara Permanen
+    signingConfigs {
+        create("stable") {
+            storeFile = file("aura.keystore")
+            storePassword = "aura123"
+            keyAlias = "aura"
+            keyPassword = "aura123"
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("stable")
+        }
+        release {
+            signingConfig = signingConfigs.getByName("stable")
+            isMinifyEnabled = false
+        }
     }
     
     buildFeatures {
