@@ -61,51 +61,97 @@ fun GalleryApp(viewModel: GalleryViewModel) {
     val isLoading by viewModel.isLoading.collectAsState()
     var selectedMedia by remember { mutableStateOf<MediaModel?>(null) }
 
-    val requiredPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VIDEO)
-    } else {
-        arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+    val requiredPermissions = remember {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            arrayOf(
+                Manifest.permission.READ_MEDIA_IMAGES,
+                Manifest.permission.READ_MEDIA_VIDEO
+            )
+        } else {
+            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
     }
 
     var hasPermissions by remember {
-        mutableStateOf(requiredPermissions.all { perm -> ContextCompat.checkSelfPermission(context, perm) == PackageManager.PERMISSION_GRANTED })
+        mutableStateOf(
+            requiredPermissions.all { perm ->
+                ContextCompat.checkSelfPermission(context, perm) == PackageManager.PERMISSION_GRANTED
+            }
+        )
     }
 
-    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissionsResult ->
-        val isGranted = permissionsResult.values.all { it }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissionsResult ->
+        val isGranted = permissionsResult.values.any { it }
         hasPermissions = isGranted
-        if (isGranted) viewModel.loadMedia()
+        if (isGranted) {
+            viewModel.loadMedia()
+        }
     }
 
-    LaunchedEffect(Unit) {
-        if (hasPermissions) viewModel.loadMedia() else permissionLauncher.launch(requiredPermissions)
+    LaunchedEffect(hasPermissions) {
+        if (hasPermissions) {
+            viewModel.loadMedia()
+        }
     }
 
     if (selectedMedia != null) {
         BackHandler { selectedMedia = null }
         FullscreenViewer(media = selectedMedia!!, onClose = { selectedMedia = null })
     } else {
-        PhotoGridScreen(mediaList = mediaList, isLoading = isLoading, hasPermissions = hasPermissions, onRequestPermissions = { permissionLauncher.launch(requiredPermissions) }, onMediaClick = { media -> selectedMedia = media })
+        PhotoGridScreen(
+            mediaList = mediaList,
+            isLoading = isLoading,
+            hasPermissions = hasPermissions,
+            onRequestPermissions = { permissionLauncher.launch(requiredPermissions) },
+            onMediaClick = { media -> selectedMedia = media }
+        )
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PhotoGridScreen(mediaList: List<MediaModel>, isLoading: Boolean, hasPermissions: Boolean, onRequestPermissions: () -> Unit, onMediaClick: (MediaModel) -> Unit) {
-    Scaffold(topBar = { TopAppBar(title = { Text("Aura Gallery", fontWeight = FontWeight.Bold) }, colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)) }) { innerPadding ->
+fun PhotoGridScreen(
+    mediaList: List<MediaModel>,
+    isLoading: Boolean,
+    hasPermissions: Boolean,
+    onRequestPermissions: () -> Unit,
+    onMediaClick: (MediaModel) -> Unit
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Aura Gallery", fontWeight = FontWeight.Bold) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
+            )
+        }
+    ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             when {
                 !hasPermissions -> {
-                    Column(modifier = Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(
+                        modifier = Modifier.fillMaxSize().padding(24.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
                         Text("Izin Akses Media Diperlukan", style = MaterialTheme.typography.titleMedium)
                         Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = onRequestPermissions) { Text("Izinkan Akses") }
+                        Button(onClick = onRequestPermissions) {
+                            Text("Izinkan Akses")
+                        }
                     }
                 }
                 isLoading && mediaList.isEmpty() -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                 mediaList.isEmpty() -> Text("Tidak ada foto atau video ditemukan.", modifier = Modifier.align(Alignment.Center))
                 else -> {
-                    LazyVerticalGrid(columns = GridCells.Fixed(3), modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(2.dp), horizontalArrangement = Arrangement.spacedBy(2.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(3),
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
                         items(items = mediaList, key = { media -> media.uri.toString() }) { media ->
                             MediaGridItem(media = media, onClick = { onMediaClick(media) })
                         }
@@ -119,10 +165,28 @@ fun PhotoGridScreen(mediaList: List<MediaModel>, isLoading: Boolean, hasPermissi
 @Composable
 fun MediaGridItem(media: MediaModel, onClick: () -> Unit) {
     val context = LocalContext.current
-    Box(modifier = Modifier.fillMaxWidth().aspectRatio(1f).background(Color.Black).clickable { onClick() }) {
-        AsyncImage(model = ImageRequest.Builder(context).data(media.uri).crossfade(true).build(), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f)
+            .background(Color.Black)
+            .clickable { onClick() }
+    ) {
+        AsyncImage(
+            model = ImageRequest.Builder(context).data(media.uri).crossfade(true).build(),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
         if (media.isVideo) {
-            Box(modifier = Modifier.padding(6.dp).size(26.dp).background(Color.Black.copy(alpha = 0.65f), CircleShape).align(Alignment.BottomEnd), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier
+                    .padding(6.dp)
+                    .size(26.dp)
+                    .background(Color.Black.copy(alpha = 0.65f), CircleShape)
+                    .align(Alignment.BottomEnd),
+                contentAlignment = Alignment.Center
+            ) {
                 Icon(imageVector = Icons.Default.PlayArrow, contentDescription = "Video", tint = Color.White, modifier = Modifier.size(16.dp))
             }
         }
@@ -134,13 +198,38 @@ fun FullscreenViewer(media: MediaModel, onClose: () -> Unit) {
     val context = LocalContext.current
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
         if (media.isVideo) {
-            val exoPlayer = remember(media.uri) { ExoPlayer.Builder(context).build().apply { setMediaItem(MediaItem.fromUri(media.uri)); prepare(); playWhenReady = true } }
-            DisposableEffect(exoPlayer) { onDispose { exoPlayer.release() } }
-            AndroidView(factory = { ctx -> PlayerView(ctx).apply { player = exoPlayer; useController = true; layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT) } }, modifier = Modifier.fillMaxSize())
+            val exoPlayer = remember(media.uri) {
+                ExoPlayer.Builder(context).build().apply {
+                    setMediaItem(MediaItem.fromUri(media.uri))
+                    prepare()
+                    playWhenReady = true
+                }
+            }
+            DisposableEffect(exoPlayer) {
+                onDispose { exoPlayer.release() }
+            }
+            AndroidView(
+                factory = { ctx ->
+                    PlayerView(ctx).apply {
+                        player = exoPlayer
+                        useController = true
+                        layoutParams = FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+                    }
+                },
+                modifier = Modifier.fillMaxSize()
+            )
         } else {
-            AsyncImage(model = ImageRequest.Builder(context).data(media.uri).crossfade(true).build(), contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+            AsyncImage(
+                model = ImageRequest.Builder(context).data(media.uri).crossfade(true).build(),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize()
+            )
         }
-        IconButton(onClick = onClose, modifier = Modifier.statusBarsPadding().padding(8.dp).align(Alignment.TopStart).background(Color.Black.copy(alpha = 0.5f), CircleShape)) {
+        IconButton(
+            onClick = onClose,
+            modifier = Modifier.statusBarsPadding().padding(8.dp).align(Alignment.TopStart).background(Color.Black.copy(alpha = 0.5f), CircleShape)
+        ) {
             Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
         }
     }
