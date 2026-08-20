@@ -1,0 +1,6 @@
+{
+  "name": "Aura Gallery - Android Architecture Studio",
+  "description": "Clean Architecture Jetpack Compose native Android project setup and interactive prototype for Aura Gallery (com.auragallery.app).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
